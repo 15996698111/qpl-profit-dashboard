@@ -64,12 +64,13 @@
   }
   @keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
   h1{
-    font-size:23px;font-weight:800;letter-spacing:1px;
+    font-size:30px;font-weight:800;letter-spacing:1px;
     background:linear-gradient(90deg,#7fe9ff,#a78bfa);
     -webkit-background-clip:text;background-clip:text;color:transparent;
     text-shadow:0 0 24px rgba(34,211,238,.25);
-    display:flex;align-items:center;
+    display:flex;align-items:center;justify-content:center;
   }
+  .brand{width:100%;text-align:center;margin-bottom:10px}
   h1::before{
     content:"";display:inline-block;width:9px;height:9px;border-radius:50%;
     background:var(--green);box-shadow:0 0 12px var(--green);
@@ -78,7 +79,7 @@
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
   .meta{font-size:12px;color:var(--sub);margin-top:6px}
   .meta b{color:var(--cyan);font-weight:700}
-  .filterbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .filterbar{width:100%;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .filters{display:flex;gap:8px;flex-wrap:wrap}
   .chip{
     border:1px solid var(--line);background:rgba(20,30,52,.5);color:var(--sub);
@@ -221,8 +222,8 @@
 <body>
 <div class="wrap">
   <header>
-    <div>
-      <h1>七匹狼 · 商品利润 BI 看板</h1>
+    <div class="brand">
+      <h1>宝丰-店铺/商品利润BI综合看板</h1>
       <div class="meta">数据区间 <b id="m_range">—</b> ｜ 共 <b id="m_days">0</b> 天 ｜ 聚合维度 <b>店铺 + 款式</b> ｜ 口径 <b>扣退后</b> ｜ 共 <b id="m_stores">0</b> 个店铺 ｜ <b id="m_products">0</b> 个款式</div>
     </div>
     <div class="filterbar">
