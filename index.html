@@ -131,6 +131,7 @@
     vertical-align:middle;
   }
   .dinp:focus{border-color:var(--cyan);box-shadow:var(--glow)}
+  .brandbar{display:flex;align-items:center;gap:6px;margin-left:8px}
   .chip.ghost{background:transparent;opacity:.65}
   .chip.ghost.active{opacity:1}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
@@ -229,6 +230,14 @@
       <div class="csel" id="storeFilter">
         <button type="button" class="csel-trigger" id="storeTrigger"><span class="csel-cur">全部店铺</span><i class="caret">▾</i></button>
         <div class="csel-list" id="storeList"></div>
+      </div>
+      <div class="brandbar" id="brandFilter">
+        <span class="rlbl">品牌</span>
+        <span class="chip active" data-b="全部">全部</span>
+        <span class="chip" data-b="七匹狼">七匹狼</span>
+        <span class="chip" data-b="恒源祥">恒源祥</span>
+        <span class="chip" data-b="轻外SIMWAY">轻外SIMWAY</span>
+        <span class="chip" data-b="其他">其他</span>
       </div>
     </div>
     <div class="filterbar" id="rangeBar">
@@ -34390,7 +34399,7 @@ const DATA = {
   meta: ARCHIVE.meta || {}
 };
 
-let curPlat = '全部', curStore = '';
+let curPlat = '全部', curStore = '', curBrand = '全部';
 let charts = {};
 let sortKey = 'sales_amount', sortAsc = false;
 
@@ -34535,7 +34544,14 @@ function renderTable(list){
   });
 }
 
-function matchStore(d){ return (curPlat==='全部'||d.platform===curPlat) && (curStore===''||short(d.store)===curStore); }
+function brandOf(store){
+  const s = (store||'');
+  if(s.includes('七匹狼') || s.toUpperCase().includes('SEPTWOLVES')) return '七匹狼';
+  if(s.includes('恒源祥')) return '恒源祥';
+  if(s.toUpperCase().includes('SIMWAY')) return '轻外SIMWAY';
+  return '其他';
+}
+function matchStore(d){ return (curPlat==='全部'||d.platform===curPlat) && (curBrand==='全部'||brandOf(d.store)===curBrand) && (curStore===''||short(d.store)===curStore); }
 function filteredStores(){ return DATA.stores.filter(matchStore); }
 
 // 商品明细按「店铺款式编码」(spu_code) 聚合：同一款式下的多个 SKU 汇总为一行，金额类求和、百分比类重算
@@ -34611,7 +34627,8 @@ function buildFilters(){
 
 function refresh(){
   const platformList = curPlat==='全部'?DATA.stores:DATA.stores.filter(d=>d.platform===curPlat);
-  populateStoreFilter(platformList);
+  const brandList = platformList.filter(d=> curBrand==='全部' || brandOf(d.store)===curBrand);
+  populateStoreFilter(brandList);
   const sList=filteredStoresEx();
   const pList=productsFilteredEx();
   const ds=selectedDates();
@@ -34703,6 +34720,13 @@ document.getElementById('rangeApply').onclick=()=>{
   rangeCustomEnd = s <= e ? e : s;
   setRange('custom','custom');
 };
+// 品牌筛选（七匹狼 / 恒源祥 / 轻外SIMWAY / 其他）
+document.querySelectorAll('#brandFilter .chip').forEach(c=>c.onclick=()=>{
+  curBrand=c.dataset.b;
+  curStore='';
+  document.querySelectorAll('#brandFilter .chip').forEach(x=>x.classList.toggle('active', x.dataset.b===curBrand));
+  refresh();
+});
 </script>
 </body>
 </html>
