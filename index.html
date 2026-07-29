@@ -83,7 +83,7 @@
   .chip{
     border:1px solid var(--line);background:rgba(20,30,52,.5);color:var(--sub);
     padding:6px 14px;border-radius:999px;font-size:13px;cursor:pointer;transition:.18s;font-weight:600;
-    letter-spacing:.5px;
+    letter-spacing:.5px;appearance:none;font-family:inherit;vertical-align:middle;
   }
   .chip:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:var(--glow)}
   .chip.active{
@@ -109,11 +109,12 @@
   .csel .caret{font-style:normal;font-size:10px;color:var(--sub);transition:transform .2s}
   .csel.open .caret{transform:rotate(180deg);color:var(--cyan)}
   .csel-list{
-    position:fixed;z-index:99999;min-width:260px;max-width:420px;max-height:360px;overflow:auto;
+    position:fixed;z-index:99999;min-width:260px;max-width:420px;pointer-events:auto;
     background:rgba(12,20,36,.97);backdrop-filter:blur(8px);border:1px solid var(--line);
     border-radius:12px;padding:6px;box-shadow:0 12px 36px rgba(0,0,0,.5);display:none;
   }
   .csel-list.open{display:block;animation:dropIn .18s ease}
+  .csel-scroll{max-height:360px;overflow:auto;overscroll-behavior:contain;}
   @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
   .csel-item{
     display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;
@@ -124,6 +125,12 @@
   .csel-item .tag{margin-left:0}
   .rlbl{font-size:12px;color:var(--sub);font-weight:600;margin-right:2px}
   .rsep{color:var(--line);margin:0 5px}
+  .dinp{
+    background:rgba(8,14,28,.7);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:5px 8px;font-size:12px;font-family:inherit;outline:none;
+    vertical-align:middle;
+  }
+  .dinp:focus{border-color:var(--cyan);box-shadow:var(--glow)}
   .chip.ghost{background:transparent;opacity:.65}
   .chip.ghost.active{opacity:1}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
@@ -234,6 +241,11 @@
       <span class="chip ghost" data-n="7" data-mode="cal">近7天·自然</span>
       <span class="chip ghost" data-n="14" data-mode="cal">近14天·自然</span>
       <span class="chip ghost" data-n="30" data-mode="cal">近30天·自然</span>
+      <span class="rsep">|</span>
+      <span class="rlbl">自定义</span>
+      <input type="date" class="dinp" id="rangeStart">
+      <input type="date" class="dinp" id="rangeEnd">
+      <button type="button" class="chip ghost" id="rangeApply">应用</button>
     </div>
   </header>
 
@@ -34295,8 +34307,10 @@ const tagName = p => ({'抖音':'抖','抖店':'抖','天猫':'猫','淘宝':'�
 function prodLabel(p,n=18){ const s=(p.product_name||'').replace(/【.*?】/,'').replace(/\(.*?\)/,''); if(s) return s.length>n?s.slice(0,n)+'…':s; return String(p.sku_code||'—').slice(-12); }
 
 // ===================== 时间范围（跨天记忆）=====================
-let rangeMode = 'roll';     // 'roll' 滚动最近 N 个有数据日 | 'cal' 自然日历窗口
-let rangeN = 30;            // 7 / 14 / 30 / 'all'
+let rangeMode = 'roll';     // 'roll' 滚动最近 N 个有数据日 | 'cal' 自然日历窗口 | 'custom'
+let rangeN = 30;            // 7 / 14 / 30 / 'all' / 'custom'
+let rangeCustomStart = '';
+let rangeCustomEnd = '';
 let RANGE = null;
 function addDays(dateStr, n){
   const t = new Date(dateStr + 'T00:00:00');
@@ -34307,6 +34321,10 @@ function selectedDates(){
   const dates = [...(ARCHIVE.dates||[])].sort();
   if(!dates.length) return [];
   if(rangeN==='all') return dates;
+  if(rangeN==='custom'){
+    if(!rangeCustomStart || !rangeCustomEnd) return dates;
+    return dates.filter(d=> d >= rangeCustomStart && d <= rangeCustomEnd);
+  }
   if(rangeMode==='roll') return dates.slice(-rangeN);
   const max = dates[dates.length-1];
   const cut = addDays(max, -(rangeN-1));
@@ -34347,12 +34365,23 @@ function buildRange(){
 }
 function setRange(n, mode){
   rangeN = n; rangeMode = mode;
+  if(n !== 'custom'){ rangeCustomStart = ''; rangeCustomEnd = ''; }
   RANGE = buildRange();
   SPU_PRODUCTS = aggregateBySpu(RANGE.products);
   document.querySelectorAll('#rangeBar .chip').forEach(c=>c.classList.toggle('active', String(c.dataset.n)===String(rangeN) && c.dataset.mode===rangeMode));
   refresh();
 }
 RANGE = buildRange();
+// 初始化自定义日期输入框范围
+(function initRangeInputs(){
+  const dates = [...(ARCHIVE.dates||[])].sort();
+  if(dates.length){
+    const minD = dates[0], maxD = dates[dates.length-1];
+    const s = document.getElementById('rangeStart'), e = document.getElementById('rangeEnd');
+    [s,e].forEach(el=>{ el.min = minD; el.max = maxD; });
+    s.value = minD; e.value = maxD;
+  }
+})();
 // 适配器：让原有渲染逻辑透明读取“当前选中区间”的数据
 const DATA = {
   get stores(){ return RANGE.stores; },
@@ -34562,9 +34591,9 @@ function populateStoreFilter(platformList){
     const tag=all?`<span class="tag ${tagOf(d.platform)}">${tagName(d.platform)}</span> `:'';
     return `<div class="csel-item${curStore===s?' sel':''}" data-v="${s}">${tag}${s}</div>`;
   }).join('');
-  list.innerHTML=html;
-  list.querySelectorAll('.csel-item').forEach(it=>{
-    it.onclick=()=>{ curStore=it.dataset.v; root.classList.remove('open'); refresh(); };
+  list.innerHTML='<div class="csel-scroll">'+html+'</div>';
+  list.querySelectorAll('.csel-scroll .csel-item').forEach(it=>{
+    it.onclick=()=>{ curStore=it.dataset.v; closeStoreDropdown(); refresh(); };
   });
 }
 
@@ -34586,7 +34615,8 @@ function refresh(){
   const sList=filteredStoresEx();
   const pList=productsFilteredEx();
   const ds=selectedDates();
-  document.getElementById('m_range').textContent = ds.length? (ds[0]+' ~ '+ds[ds.length-1]+'（'+(rangeN==='all'?'全部':('近'+rangeN+'天'))+(rangeMode==='roll'?'·滚动':'·自然')+'）') : '无数据';
+  const modeLabel = rangeN==='all'?'全部': rangeN==='custom'?'自定义': (rangeMode==='roll'?'近'+rangeN+'天·滚动':'近'+rangeN+'天·自然');
+  document.getElementById('m_range').textContent = ds.length? (ds[0]+' ~ '+ds[ds.length-1]+'（'+modeLabel+'）') : '无数据';
   document.getElementById('m_days').textContent = ds.length;
   document.getElementById('m_stores').textContent=sList.length;
   document.getElementById('m_products').textContent=pList.length;
@@ -34657,10 +34687,18 @@ document.getElementById('spuStoreFilter').addEventListener('input',e=>{
   curSpuStoreFilter=e.target.value.trim();
   renderTable(productsFilteredEx());
 });
-// 顶部时间范围选择器（滚动 N 日 / 自然日历，可切换）
+// 顶部时间范围选择器（滚动 N 日 / 自然日历 / 自定义区间，可切换）
 document.querySelectorAll('#rangeBar .chip').forEach(c=>c.onclick=()=>{
   setRange(c.dataset.n==='all'?'all':+c.dataset.n, c.dataset.mode);
 });
+document.getElementById('rangeApply').onclick=()=>{
+  const s = document.getElementById('rangeStart').value;
+  const e = document.getElementById('rangeEnd').value;
+  if(!s || !e) return;
+  rangeCustomStart = s <= e ? s : e;
+  rangeCustomEnd = s <= e ? e : s;
+  setRange('custom','custom');
+};
 </script>
 </body>
 </html>
