@@ -34669,8 +34669,12 @@ document.addEventListener('click',(e)=>{
   const root=document.getElementById('storeFilter');
   if(list && root && !root.contains(e.target) && !list.contains(e.target)) closeStoreDropdown();
 });
-// 滚动/缩放时关闭，避免错位
-window.addEventListener('scroll',closeStoreDropdown,true);
+// 滚动/缩放时关闭，避免错位；但下拉列表内部滚动时不关闭
+window.addEventListener('scroll',(e)=>{
+  const list=document.getElementById('storeList');
+  if(list && list.contains(e.target)) return;
+  closeStoreDropdown();
+},true);
 window.addEventListener('resize',closeStoreDropdown);
 // 第一层店铺名筛选（仅作用于店铺明细表）
 document.getElementById('storeNameFilter').addEventListener('input',e=>{
